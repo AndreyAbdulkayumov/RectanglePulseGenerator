@@ -38,7 +38,7 @@ int PulseTime_ms = 0;
 //
 /*****************************************/
 
-//Функция записи команды в дисплей без проверки флага занятости
+// Функция записи команды в дисплей без проверки флага занятости
 void SendCommand_Without_BF(int data)
 {
 	uint8_t Data_High = data & 0xf0;
@@ -56,7 +56,7 @@ void SendCommand_Without_BF(int data)
 	HAL_Delay(PulseTime_ms);
 }
 
-// Функция записи команды в дисплей
+
 void SendCommand(int data)
 {
 	//Для 4-х битного режима
@@ -91,7 +91,6 @@ void SendCommand(int data)
 }
 
 
-// Функция записи команды в дисплей
 void SendByte(int byte)
 {
 	// Для 4-х битного режима
@@ -132,7 +131,7 @@ void SendByte(int byte)
 //
 /*****************************************/
 
-// Инициализация дисплея по I2C
+
 void HD44780_Init_I2C(I2C_HandleTypeDef* Module, uint8_t Address,
 		DisplayedLines Lines, CursorType Cursor)
 {
@@ -192,7 +191,7 @@ void HD44780_Init_I2C(I2C_HandleTypeDef* Module, uint8_t Address,
 	SendCommand(0x01);     // Очистка дисплея
 }
 
-// Установки курсора в заданное положение
+
 void HD44780_SetCursor(uint8_t x, uint8_t y)
 {
 	if (y > 0 && y <= 2)
@@ -203,7 +202,19 @@ void HD44780_SetCursor(uint8_t x, uint8_t y)
 	}
 }
 
-// Вывод строки
+
+void HD44780_Cursor_Active(void)
+{
+	SendCommand(CharCode_Cursor_Line);
+}
+
+
+void HD44780_Cursor_Deactive(void)
+{
+	SendCommand(CharCode_Cursor_Disable);
+}
+
+
 void HD44780_WriteString(char* String)
 {
 	while(*String != 0)
@@ -212,8 +223,8 @@ void HD44780_WriteString(char* String)
 	}
 }
 
-// Вывод числа на дисплей
-void HD44780_WriteNumber(int Number)
+
+void HD44780_WriteNumber(uint32_t Number)
 {
 	int ed, dec, sot;
 	
@@ -283,7 +294,7 @@ void HD44780_WriteNumber(int Number)
 	}
 }
 
-// Очистка экрана дисплея
+
 void HD44780_Clear()
 {
 	SendCommand(0x01); // Команда очистки дисплея

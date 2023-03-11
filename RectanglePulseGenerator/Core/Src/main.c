@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "LCD_HD44780.h"
+#include "IncrementalEncoder.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,6 +37,39 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+struct FieldValue
+{
+	uint8_t X;
+	uint8_t Y;
+	uint32_t Value;
+};
+
+struct FieldValue Period =
+{
+		.X = 4,
+		.Y = 1,
+		.Value = 0
+};
+
+struct FieldValue DutyCycle =
+{
+		.X = 12,
+		.Y = 1,
+		.Value = 0
+};
+
+struct FieldValue Amplitude =
+{
+		.X = 4,
+		.Y = 2,
+		.Value = 0
+};
+
+struct FieldValue* SelectedField;
+
+uint8_t FieldCounter = 1;
+
+uint8_t ButtonPressed = 0;
 
 /* USER CODE END PM */
 
@@ -56,7 +90,33 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void ChangeField(void)
+{
+	FieldCounter++;
 
+	if (FieldCounter > 3)
+	{
+		FieldCounter = 1;
+	}
+
+	switch(FieldCounter)
+	{
+	case 1:
+		SelectedField = &Period;
+		break;
+
+	case 2:
+		SelectedField = &DutyCycle;
+		break;
+
+	case 3:
+		SelectedField = &Amplitude;
+		break;
+	}
+
+	HD44780_SetCursor(SelectedField->X, SelectedField->Y);
+	IncrementalEncoder_SetInitialValue(SelectedField->Value);
+}
 /* USER CODE END 0 */
 
 /**
@@ -89,8 +149,30 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  HD44780_Init_I2C(&hi2c1, 0x3F, TwoLines, Disable);
-  HD44780_WriteString("Hello Andrey");
+
+  HD44780_Init_I2C(&hi2c1, 0x3F, TwoLines, Line);
+
+  IncrementalEncoder_Init();
+
+  HD44780_SetCursor(1, 1);
+  HD44780_WriteString("Per");
+
+  HD44780_SetCursor(Period.X, Period.Y);
+  HD44780_WriteNumber(Period.Value);
+
+  HD44780_SetCursor(9, 1);
+  HD44780_WriteString("DuC");
+
+  HD44780_SetCursor(DutyCycle.X, DutyCycle.Y);
+  HD44780_WriteNumber(DutyCycle.Value);
+
+  HD44780_SetCursor(1, 2);
+  HD44780_WriteString("Amp");
+
+  HD44780_SetCursor(Amplitude.X, Amplitude.Y);
+  HD44780_WriteNumber(Amplitude.Value);
+
+  SelectedField = &Period;
 
   /* USER CODE END 2 */
 
@@ -101,6 +183,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+	  if ((GPIOE->IDR & (1 << 13)) == 0 && ButtonPressed == 0)
+	  {
+		  ButtonPressed = 1;
+
+		  ChangeField();
+	  }
+
+	  else if (ButtonPressed != 0)
+	  {
+		  ButtonPressed = 0;
+	  }
+
+	  HD44780_SetCursor(SelectedField->X, SelectedField->Y);
+	  SelectedField->Value = IncrementalEncoder_GetValue();
+	  HD44780_WriteNumber(SelectedField->Value);
+
+	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -191,12 +291,20 @@ static void MX_I2C1_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 /* USER CODE BEGIN MX_GPIO_Init_1 */
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin : Encoder_Button_Pin */
+  GPIO_InitStruct.Pin = Encoder_Button_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(Encoder_Button_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

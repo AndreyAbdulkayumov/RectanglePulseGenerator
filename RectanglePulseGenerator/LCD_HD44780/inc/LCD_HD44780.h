@@ -19,6 +19,8 @@ typedef enum
 void HD44780_Init_I2C(I2C_HandleTypeDef* Module, uint8_t Address,
 		DisplayedLines Lines, CursorType Cursor);
 void HD44780_SetCursor(uint8_t x, uint8_t y);
+void HD44780_Cursor_Active(void);
+void HD44780_Cursor_Deactive(void);
 void HD44780_WriteString(char* String);
-void HD44780_WriteNumber(int Number);
+void HD44780_WriteNumber(uint32_t Number);
 void HD44780_Clear(void);
