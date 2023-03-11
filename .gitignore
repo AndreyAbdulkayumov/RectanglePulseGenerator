@@ -1,0 +1,13 @@
+# eclipse specific git ignore
+.metadata/
+RectanglePulseGenerator/.settings/
+RectanglePulseGenerator/Debug/
+RectanglePulseGenerator/Release/
+RectanglePulseGenerator/*.launch
+
+# STM32 git ignore
+# RectanglePulseGenerator/GPS_Logger/Drivers
+RectanglePulseGenerator/Debug/.mxproject
+
+
+
