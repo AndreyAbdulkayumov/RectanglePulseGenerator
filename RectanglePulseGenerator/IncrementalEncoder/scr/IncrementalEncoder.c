@@ -70,7 +70,7 @@ void IncrementalEncoder_Init(void)
 	TIM1->CR1 |= TIM_CR1_CEN;     // Включение таймера 1
 }
 
-uint32_t IncrementalEncoder_GetValue(void)
+uint32_t IncrementalEncoder_GetValue(uint32_t MaxValue)
 {
 	if (Value == 0 && (TIM1->CR1 & TIM_CR1_DIR) != 0)
 	{
@@ -82,7 +82,7 @@ uint32_t IncrementalEncoder_GetValue(void)
 		Value = TIM1->CNT * 0.25;
 	}
 
-	if (Value > 999)
+	if (Value > MaxValue)
 	{
 		Value = 0;
 		TIM1->CNT = 0;

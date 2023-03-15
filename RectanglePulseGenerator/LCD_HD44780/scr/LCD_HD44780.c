@@ -31,6 +31,7 @@ uint8_t I2C_Buffer[2] = { 0, 0 };
 
 int PulseTime_ms = 0;
 
+uint8_t LastNumberLength = 0;
 
 /*****************************************/
 //
@@ -224,76 +225,24 @@ void HD44780_WriteString(char* String)
 }
 
 
-void HD44780_WriteNumber(uint32_t Number)
+void HD44780_WriteNumber(uint8_t X, uint8_t Y, double Number, const char* Format)
 {
-	int ed, dec, sot;
-	
-	// Вывод числа num на дисплей
-	// Разбитие числа на разряды
-	ed = Number % 10 + 48;
-	dec = ((Number % 100) / 10) + 48;
-	sot = ((Number % 1000) / 100) + 48;
+	char str[10];
 
-	// Вывод числа
-	if (Number < 10)
+	sprintf(str, Format, Number);
+
+	HD44780_SetCursor(X, Y);
+
+	for (uint8_t i = 0; i < LastNumberLength; i++)
 	{
 		SendByte(CharCode_Empty);
-		SendByte(CharCode_Empty);
-
-		if (Number < 0)
-		{
-			SendByte(CharCode_Minus);
-		}
-
-		else
-		{
-			SendByte(CharCode_Empty);
-		}
-
-		SendByte(ed);   // Вывод единиц
 	}
 
-	else if (Number >= 10 && Number < 100)
-	{
-		SendByte(CharCode_Empty);
+	HD44780_SetCursor(X, Y);
+	HD44780_WriteString(str);
 
-		if (Number < 0)
-		{
-			SendByte(CharCode_Minus);
-		}
-
-		else
-		{
-			SendByte(CharCode_Empty);
-		}
-
-		SendByte(dec);  // Вывод десятков
-		SendByte(ed);   // Вывод единиц
-	}
-
-	else if (Number >= 100 && Number < 1000)
-	{
-		if (Number < 0)
-		{
-			SendByte(CharCode_Minus);
-		}
-
-		else
-		{
-			SendByte(CharCode_Empty);
-		}
-
-		SendByte(sot);  // Вывод сотен
-		SendByte(dec);  // Вывод десятков
-		SendByte(ed);   // Вывод единиц
-	}
-
-	else
-	{
-		HD44780_WriteString("Very much");
-	}
+	LastNumberLength = strlen(str);
 }
-
 
 void HD44780_Clear()
 {

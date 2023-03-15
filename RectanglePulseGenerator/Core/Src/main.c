@@ -41,49 +41,77 @@ struct FieldValue
 {
 	uint8_t X;
 	uint8_t Y;
-	uint32_t Value;
+
+	double Value;
+	double MaxValue;
+
+	double Additive;
+
+	char* Format;
 };
 
 struct FieldValue Period =
 {
-		.X = 4,
+		.X = 5,
 		.Y = 1,
-		.Value = 0
+
+		.Value = 0,
+		.MaxValue = 100,
+
+		.Additive = 1,
+
+		.Format = "%.0f"
 };
 
 struct FieldValue DutyCycle =
 {
-		.X = 12,
+		.X = 13,
 		.Y = 1,
-		.Value = 0
+
+		.Value = 0,
+		.MaxValue = 1000,
+
+		.Additive = 1,
+
+		.Format = "%.0f"
 };
 
 struct FieldValue Amplitude =
 {
-		.X = 4,
+		.X = 5,
 		.Y = 2,
-		.Value = 0
+
+		.Value = 0,
+		.MaxValue = 2.9,
+
+		.Additive = 0.1,
+
+		.Format = "%.1f"
 };
 
 struct FieldValue* SelectedField;
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+DAC_HandleTypeDef hdac;
+
+I2C_HandleTypeDef hi2c1;
+
+/* USER CODE BEGIN PV */
 
 uint8_t FieldCounter = 1;
 
 uint8_t ButtonPressed = 0;
 
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c1;
-
-/* USER CODE BEGIN PV */
-
+const double Vref = 2.91;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
+static void MX_DAC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -115,8 +143,14 @@ void ChangeField(void)
 	}
 
 	HD44780_SetCursor(SelectedField->X, SelectedField->Y);
-	IncrementalEncoder_SetInitialValue(SelectedField->Value);
+	IncrementalEncoder_SetInitialValue(SelectedField->Value / SelectedField->Additive);
 }
+
+uint32_t DAC_GetCodeFrom(double Value)
+{
+	return Value * 4095 / Vref;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -148,8 +182,10 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
+  MX_DAC_Init();
   /* USER CODE BEGIN 2 */
 
+  // 0x27
   HD44780_Init_I2C(&hi2c1, 0x3F, TwoLines, Line);
 
   IncrementalEncoder_Init();
@@ -157,22 +193,24 @@ int main(void)
   HD44780_SetCursor(1, 1);
   HD44780_WriteString("Per");
 
-  HD44780_SetCursor(Period.X, Period.Y);
-  HD44780_WriteNumber(Period.Value);
+  HD44780_WriteNumber(Period.X, Period.Y,
+		  Period.Value, Period.Format);
 
   HD44780_SetCursor(9, 1);
   HD44780_WriteString("DuC");
 
-  HD44780_SetCursor(DutyCycle.X, DutyCycle.Y);
-  HD44780_WriteNumber(DutyCycle.Value);
+  HD44780_WriteNumber(DutyCycle.X, DutyCycle.Y,
+		  DutyCycle.Value, DutyCycle.Format);
 
   HD44780_SetCursor(1, 2);
   HD44780_WriteString("Amp");
 
-  HD44780_SetCursor(Amplitude.X, Amplitude.Y);
-  HD44780_WriteNumber(Amplitude.Value);
+  HD44780_WriteNumber(Amplitude.X, Amplitude.Y,
+		  Amplitude.Value, Amplitude.Format);
 
   SelectedField = &Period;
+
+  HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 
   /* USER CODE END 2 */
 
@@ -196,9 +234,18 @@ int main(void)
 		  ButtonPressed = 0;
 	  }
 
-	  HD44780_SetCursor(SelectedField->X, SelectedField->Y);
-	  SelectedField->Value = IncrementalEncoder_GetValue();
-	  HD44780_WriteNumber(SelectedField->Value);
+
+	  SelectedField->Value =
+			  IncrementalEncoder_GetValue(SelectedField->MaxValue / SelectedField->Additive) * SelectedField->Additive;
+
+	  HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
+			  SelectedField->Value, SelectedField->Format);
+
+	  HAL_DAC_SetValue(
+			  &hdac,
+			  DAC_CHANNEL_1,
+			  DAC_ALIGN_12B_R,
+			  DAC_GetCodeFrom(Amplitude.Value));
 
 	  HAL_Delay(100);
   }
@@ -251,6 +298,46 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief DAC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_DAC_Init(void)
+{
+
+  /* USER CODE BEGIN DAC_Init 0 */
+
+  /* USER CODE END DAC_Init 0 */
+
+  DAC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN DAC_Init 1 */
+
+  /* USER CODE END DAC_Init 1 */
+
+  /** DAC Initialization
+  */
+  hdac.Instance = DAC;
+  if (HAL_DAC_Init(&hdac) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** DAC channel OUT1 config
+  */
+  sConfig.DAC_Trigger = DAC_TRIGGER_NONE;
+  sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
+  if (HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN DAC_Init 2 */
+
+  /* USER CODE END DAC_Init 2 */
+
+}
+
+/**
   * @brief I2C1 Initialization Function
   * @param None
   * @retval None
@@ -297,6 +384,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
