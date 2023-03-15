@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "LCD_HD44780.h"
 #include "IncrementalEncoder.h"
+#include "PulseControl.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,8 +56,8 @@ struct FieldValue Period =
 		.X = 5,
 		.Y = 1,
 
-		.Value = 0,
-		.MaxValue = 100,
+		.Value = 100,
+		.MaxValue = 1000,
 
 		.Additive = 1,
 
@@ -68,7 +69,7 @@ struct FieldValue DutyCycle =
 		.X = 13,
 		.Y = 1,
 
-		.Value = 0,
+		.Value = 10,
 		.MaxValue = 1000,
 
 		.Additive = 1,
@@ -81,7 +82,7 @@ struct FieldValue Amplitude =
 		.X = 5,
 		.Y = 2,
 
-		.Value = 0,
+		.Value = 2,
 		.MaxValue = 2.9,
 
 		.Additive = 0.1,
@@ -105,6 +106,9 @@ uint8_t FieldCounter = 1;
 uint8_t ButtonPressed = 0;
 
 const double Vref = 2.91;
+
+uint32_t DAC_Code = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,6 +153,29 @@ void ChangeField(void)
 uint32_t DAC_GetCodeFrom(double Value)
 {
 	return Value * 4095 / Vref;
+}
+
+void Period_Start_Handler(void)
+{
+	GPIOD->ODR ^= 1 << 14;
+	GPIOD->ODR |= 1 << 15;
+
+	HAL_DAC_SetValue(
+			&hdac,
+			DAC_CHANNEL_1,
+			DAC_ALIGN_12B_R,
+			DAC_Code);
+}
+
+void DutyCycle_End_Handler(void)
+{
+	GPIOD->ODR &= ~(1 << 15);
+
+	HAL_DAC_SetValue(
+			&hdac,
+			DAC_CHANNEL_1,
+			DAC_ALIGN_12B_R,
+			0);
 }
 
 /* USER CODE END 0 */
@@ -209,9 +236,14 @@ int main(void)
 		  Amplitude.Value, Amplitude.Format);
 
   SelectedField = &Period;
+  IncrementalEncoder_SetInitialValue(SelectedField->Value / SelectedField->Additive);
 
+  DAC_Code = DAC_GetCodeFrom(Amplitude.Value);
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 
+  PulseControl_Init(Period_Start_Handler, DutyCycle_End_Handler);
+
+  PulseControl_Generation_Start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -236,16 +268,36 @@ int main(void)
 
 
 	  SelectedField->Value =
-			  IncrementalEncoder_GetValue(SelectedField->MaxValue / SelectedField->Additive) * SelectedField->Additive;
+			  IncrementalEncoder_GetValue(
+					  SelectedField->MaxValue / SelectedField->Additive) *
+					  SelectedField->Additive;
 
 	  HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
 			  SelectedField->Value, SelectedField->Format);
 
+
+	  /*
 	  HAL_DAC_SetValue(
 			  &hdac,
 			  DAC_CHANNEL_1,
 			  DAC_ALIGN_12B_R,
 			  DAC_GetCodeFrom(Amplitude.Value));
+	  */
+
+	  if (SelectedField == &Amplitude)
+	  {
+		  DAC_Code = DAC_GetCodeFrom(Amplitude.Value);
+	  }
+
+	  else if (SelectedField == &Period)
+	  {
+		  PulseControl_SetPeriod_us((uint32_t)(SelectedField->Value * 1000));
+	  }
+
+	  else if (SelectedField == &DutyCycle)
+	  {
+		  PulseControl_SetDutyCycle_us((uint32_t)SelectedField->Value);
+	  }
 
 	  HAL_Delay(100);
   }
@@ -386,13 +438,24 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOE_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : Encoder_Button_Pin */
   GPIO_InitStruct.Pin = Encoder_Button_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(Encoder_Button_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PD14 PD15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_14|GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
