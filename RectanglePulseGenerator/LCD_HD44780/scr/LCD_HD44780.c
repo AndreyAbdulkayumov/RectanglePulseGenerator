@@ -29,9 +29,22 @@ uint8_t I2C_Address;
 
 uint8_t I2C_Buffer[2] = { 0, 0 };
 
-int PulseTime_ms = 0;
-
 uint8_t LastNumberLength = 0;
+
+double DisplayedNumber = 0;
+
+/*****************************************/
+//
+// При использовании I2C автоматически соблюдаются
+// минимальные временные показатели для импульсов управления.
+//
+// Проверка флага занятости дисплея не проводится.
+// Вместо нее поставлены задержки перед записью команды или байта.
+//
+// Для управления дисплеем используется 4-х битный режим.
+//
+/*****************************************/
+
 
 /*****************************************/
 //
@@ -49,80 +62,58 @@ void SendCommand_Without_BF(int data)
 	I2C_Buffer[1] = Data_High | Backlight | E_1  | RW_0 | RS_0;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 2, HAL_MAX_DELAY);
 
-	HAL_Delay(PulseTime_ms);
-
 	I2C_Buffer[0] = Data_High | Backlight | E_0  | RW_0 | RS_0;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 1, HAL_MAX_DELAY);
-
-	HAL_Delay(PulseTime_ms);
 }
 
 
 void SendCommand(int data)
 {
-	//Для 4-х битного режима
 	int Data_High = data & 0xf0;       // Старшая тетрада data
 	int Data_Low = (data & 0x0f) << 4;    // Младшая тетрада data
 		
-	HAL_Delay(PulseTime_ms);  // Вместо проверки флага занятости
+	HAL_Delay(1);  // Вместо проверки флага занятости
 
 	// Записываем старшую тетраду
 	I2C_Buffer[0] = Data_High | Backlight | E_0  | RW_0 | RS_0;
 	I2C_Buffer[1] = Data_High | Backlight | E_1  | RW_0 | RS_0;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 2, HAL_MAX_DELAY);
 
-	HAL_Delay(PulseTime_ms);
-
 	I2C_Buffer[0] = Data_High | Backlight | E_0  | RW_0 | RS_0;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 1, HAL_MAX_DELAY);
-
-	HAL_Delay(PulseTime_ms);
 
 	// Записываем младшую тетраду
 	I2C_Buffer[0] = Data_Low | Backlight | E_0  | RW_0 | RS_0;
 	I2C_Buffer[1] = Data_Low | Backlight | E_1  | RW_0 | RS_0;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 2, HAL_MAX_DELAY);
 
-	HAL_Delay(PulseTime_ms);
-
 	I2C_Buffer[0] = Data_Low | Backlight | E_0  | RW_0 | RS_0;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 1, HAL_MAX_DELAY);
-
-	HAL_Delay(PulseTime_ms);
 }
 
 
 void SendByte(int byte)
 {
-	// Для 4-х битного режима
 	int Byte_High = byte & 0xf0;          // Старшая тетрада data
 	int Byte_Low = (byte & 0x0f) << 4;    // Младшая тетрада data
 
-	HAL_Delay(10);    // Вместо проверки флага занятости
+	HAL_Delay(5);    // Вместо проверки флага занятости
 	
 	// Записываем старшую тетраду
 	I2C_Buffer[0] = Byte_High | Backlight | E_0  | RW_0 | RS_1;
 	I2C_Buffer[1] = Byte_High | Backlight | E_1  | RW_0 | RS_1;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 2, HAL_MAX_DELAY);
 
-	HAL_Delay(PulseTime_ms);
-
 	I2C_Buffer[0] = Byte_High | Backlight | E_0  | RW_0 | RS_1;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 1, HAL_MAX_DELAY);
-
-	HAL_Delay(PulseTime_ms);
 
 	// Записываем младшую тетраду
 	I2C_Buffer[0] = Byte_Low | Backlight | E_0  | RW_0 | RS_1;
 	I2C_Buffer[1] = Byte_Low | Backlight | E_1  | RW_0 | RS_1;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 2, HAL_MAX_DELAY);
 
-	HAL_Delay(PulseTime_ms);
-
 	I2C_Buffer[0] = Byte_Low | Backlight | E_0  | RW_0 | RS_1;
 	HAL_I2C_Master_Transmit(I2C_Module, I2C_Address, I2C_Buffer, 1, HAL_MAX_DELAY);
-
-	HAL_Delay(PulseTime_ms);
 }
 
 
@@ -189,7 +180,7 @@ void HD44780_Init_I2C(I2C_HandleTypeDef* Module, uint8_t Address,
 		break;
 	}
 
-	SendCommand(0x01);     // Очистка дисплея
+	HD44780_ClearAll();
 }
 
 
@@ -204,20 +195,10 @@ void HD44780_SetCursor(uint8_t x, uint8_t y)
 }
 
 
-void HD44780_Cursor_Active(void)
+void HD44780_WriteString(uint8_t X, uint8_t Y, char* String)
 {
-	SendCommand(CharCode_Cursor_Line);
-}
+	HD44780_SetCursor(X, Y);
 
-
-void HD44780_Cursor_Deactive(void)
-{
-	SendCommand(CharCode_Cursor_Disable);
-}
-
-
-void HD44780_WriteString(char* String)
-{
 	while(*String != 0)
 	{
 		SendByte(*String++);
@@ -227,24 +208,36 @@ void HD44780_WriteString(char* String)
 
 void HD44780_WriteNumber(uint8_t X, uint8_t Y, double Number, const char* Format)
 {
+	if (Number == DisplayedNumber)
+	{
+		return;
+	}
+
 	char str[10];
 
 	sprintf(str, Format, Number);
 
+	HD44780_ClearRegion(X, Y, LastNumberLength);
+
+	HD44780_WriteString(X, Y, str);
+
+	LastNumberLength = strlen(str);
+	DisplayedNumber = Number;
+}
+
+
+void HD44780_ClearRegion(uint8_t X, uint8_t Y, double Length)
+{
 	HD44780_SetCursor(X, Y);
 
-	for (uint8_t i = 0; i < LastNumberLength; i++)
+	for (uint8_t i = 0; i < Length; i++)
 	{
 		SendByte(CharCode_Empty);
 	}
-
-	HD44780_SetCursor(X, Y);
-	HD44780_WriteString(str);
-
-	LastNumberLength = strlen(str);
 }
 
-void HD44780_Clear()
+
+void HD44780_ClearAll()
 {
 	SendCommand(0x01); // Команда очистки дисплея
 }

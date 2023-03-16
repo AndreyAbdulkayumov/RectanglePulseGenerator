@@ -1,7 +1,7 @@
 #include "IncrementalEncoder.h"
 
-// A
-// B
+// S1 - PE11
+// S2 - PE9
 
 uint32_t Value = 0;
 
@@ -26,7 +26,7 @@ void IncrementalEncoder_Init(void)
 			        | GPIO_OSPEEDER_OSPEEDR11_0;    // CH2
 
 	// Включаем альтернативные функции Энкодера у порта E
-	GPIOE->AFR[1] |= (1<<4) | (1<<12);  // Включение AF1 у CH1, CH2
+	GPIOE->AFR[1] |= (1 << 4) | (1 << 12);  // Включение AF1 у CH1, CH2
 
 	TIM1->CR1 &= ~(TIM_CR1_CEN);   // Отключение таймера №1
 	TIM1->CCER &= ~(TIM_CCER_CC1E | TIM_CCER_CC2E);   // Отключение модулей захвата на 1 и 2 каналах
@@ -82,7 +82,7 @@ uint32_t IncrementalEncoder_GetValue(uint32_t MaxValue)
 		Value = TIM1->CNT * 0.25;
 	}
 
-	if (Value > MaxValue)
+	if (Value >= MaxValue)
 	{
 		Value = 0;
 		TIM1->CNT = 0;
