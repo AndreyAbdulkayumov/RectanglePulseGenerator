@@ -46,6 +46,8 @@ struct FieldValue
 	DisplayedNumber Number;
 	double MaxValue;
 
+	double ValueMultiplier;
+
 	double Additive;
 
 	char* Format;
@@ -64,6 +66,8 @@ struct FieldValue Period =
 		},
 
 		.MaxValue = 100,
+
+		.ValueMultiplier = 1000,
 
 		.Additive = 10,
 
@@ -84,6 +88,8 @@ struct FieldValue DutyCycle =
 
 		.MaxValue = 1000,
 
+		.ValueMultiplier = 1,
+
 		.Additive = 10,
 
 		.Format = "%.0f"
@@ -103,6 +109,8 @@ struct FieldValue Amplitude =
 		},
 
 		.MaxValue = 2.9,
+
+		.ValueMultiplier = 1,
 
 		.Additive = 0.1,
 
@@ -127,6 +135,8 @@ uint8_t ButtonPressed = 0;
 const double Vref = 2.91;
 
 uint32_t DAC_Code = 0;
+
+double BufferValue = 0;
 
 /* USER CODE END PV */
 
@@ -230,7 +240,7 @@ int main(void)
   MX_DAC_Init();
   /* USER CODE BEGIN 2 */
 
-  // 0x27
+  // I2C Address: 0x3F или 0x27
   HD44780_Init_I2C(&hi2c1, 0x3F, TwoLines, Rectangle);
 
   IncrementalEncoder_Init();
@@ -296,19 +306,21 @@ int main(void)
 	  HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
 			  &SelectedField->Number, SelectedField->Format);
 
+	  BufferValue = SelectedField->Number.Value * SelectedField->ValueMultiplier;
+
 	  if (SelectedField == &Amplitude)
 	  {
-		  DAC_Code = DAC_GetCodeFrom(Amplitude.Number.Value);
+		  DAC_Code = DAC_GetCodeFrom(BufferValue);
 	  }
 
 	  else if (SelectedField == &Period)
 	  {
-		  PulseControl_SetPeriod_us((uint32_t)(SelectedField->Number.Value * 1000));
+		  PulseControl_SetPeriod_us((uint32_t)BufferValue);
 	  }
 
 	  else if (SelectedField == &DutyCycle)
 	  {
-		  PulseControl_SetDutyCycle_us((uint32_t)SelectedField->Number.Value);
+		  PulseControl_SetDutyCycle_us((uint32_t)BufferValue);
 	  }
 
 	  HAL_Delay(100);
