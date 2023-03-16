@@ -43,7 +43,7 @@ struct FieldValue
 	uint8_t X;
 	uint8_t Y;
 
-	double Value;
+	DisplayedNumber Number;
 	double MaxValue;
 
 	double Additive;
@@ -56,8 +56,14 @@ struct FieldValue Period =
 		.X = 5,
 		.Y = 1,
 
-		.Value = 100,
-		.MaxValue = 1000,
+		.Number =
+		{
+				.Value = 10,
+				.DisplayedValue = -1,
+				.DisplayedValueLength = 0
+		},
+
+		.MaxValue = 100,
 
 		.Additive = 10,
 
@@ -69,7 +75,13 @@ struct FieldValue DutyCycle =
 		.X = 13,
 		.Y = 1,
 
-		.Value = 10,
+		.Number =
+		{
+				.Value = 10,
+				.DisplayedValue = -1,
+				.DisplayedValueLength = 0
+		},
+
 		.MaxValue = 1000,
 
 		.Additive = 10,
@@ -82,7 +94,14 @@ struct FieldValue Amplitude =
 		.X = 5,
 		.Y = 2,
 
-		.Value = 2,
+
+		.Number =
+		{
+				.Value = 2,
+				.DisplayedValue = -1,
+				.DisplayedValueLength = 0
+		},
+
 		.MaxValue = 2.9,
 
 		.Additive = 0.1,
@@ -146,10 +165,12 @@ void ChangeField(void)
 		break;
 	}
 
-	HD44780_SetCursor(SelectedField->X, SelectedField->Y);
+	HD44780_SetCursor(
+			SelectedField->X + SelectedField->Number.DisplayedValueLength,
+			SelectedField->Y);
 
 	IncrementalEncoder_SetInitialValue(
-			SelectedField->Value / SelectedField->Additive);
+			SelectedField->Number.Value / SelectedField->Additive);
 }
 
 uint32_t DAC_GetCodeFrom(double Value)
@@ -217,27 +238,34 @@ int main(void)
   HD44780_WriteString(1, 1, "Per");
 
   HD44780_WriteNumber(Period.X, Period.Y,
-		  Period.Value, Period.Format);
+		  &Period.Number, Period.Format);
 
   HD44780_WriteString(9, 1, "DuC");
 
   HD44780_WriteNumber(DutyCycle.X, DutyCycle.Y,
-		  DutyCycle.Value, DutyCycle.Format);
+		  &DutyCycle.Number, DutyCycle.Format);
 
   HD44780_WriteString(1, 2, "Amp");
 
   HD44780_WriteNumber(Amplitude.X, Amplitude.Y,
-		  Amplitude.Value, Amplitude.Format);
+		  &Amplitude.Number, Amplitude.Format);
 
   SelectedField = &Period;
-  IncrementalEncoder_SetInitialValue(SelectedField->Value / SelectedField->Additive);
+  IncrementalEncoder_SetInitialValue(SelectedField->Number.Value / SelectedField->Additive);
 
-  DAC_Code = DAC_GetCodeFrom(Amplitude.Value);
+  HD44780_SetCursor(
+		  SelectedField->X + SelectedField->Number.DisplayedValueLength,
+		  SelectedField->Y);
+
+  DAC_Code = DAC_GetCodeFrom(Amplitude.Number.Value);
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 
   PulseControl_Init(Period_Start_Handler, DutyCycle_End_Handler);
 
-  PulseControl_Generation_Start();
+  PulseControl_Generation_Start(
+		  (uint32_t)(SelectedField->Number.Value * 1000),
+		  (uint32_t)SelectedField->Number.Value);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -260,27 +288,27 @@ int main(void)
 		  ButtonPressed = 0;
 	  }
 
-	  SelectedField->Value =
+	  SelectedField->Number.Value =
 			  IncrementalEncoder_GetValue(
-					  SelectedField->MaxValue / SelectedField->Additive) *
+					  (SelectedField->MaxValue + SelectedField->Additive) / SelectedField->Additive) *
 					  SelectedField->Additive;
 
 	  HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
-			  SelectedField->Value, SelectedField->Format);
+			  &SelectedField->Number, SelectedField->Format);
 
 	  if (SelectedField == &Amplitude)
 	  {
-		  DAC_Code = DAC_GetCodeFrom(Amplitude.Value);
+		  DAC_Code = DAC_GetCodeFrom(Amplitude.Number.Value);
 	  }
 
 	  else if (SelectedField == &Period)
 	  {
-		  PulseControl_SetPeriod_us((uint32_t)(SelectedField->Value * 1000));
+		  PulseControl_SetPeriod_us((uint32_t)(SelectedField->Number.Value * 1000));
 	  }
 
 	  else if (SelectedField == &DutyCycle)
 	  {
-		  PulseControl_SetDutyCycle_us((uint32_t)SelectedField->Value);
+		  PulseControl_SetDutyCycle_us((uint32_t)SelectedField->Number.Value);
 	  }
 
 	  HAL_Delay(100);

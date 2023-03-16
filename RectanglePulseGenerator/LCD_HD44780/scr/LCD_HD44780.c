@@ -29,10 +29,6 @@ uint8_t I2C_Address;
 
 uint8_t I2C_Buffer[2] = { 0, 0 };
 
-uint8_t LastNumberLength = 0;
-
-double DisplayedNumber = 0;
-
 /*****************************************/
 //
 // При использовании I2C автоматически соблюдаются
@@ -206,23 +202,25 @@ void HD44780_WriteString(uint8_t X, uint8_t Y, char* String)
 }
 
 
-void HD44780_WriteNumber(uint8_t X, uint8_t Y, double Number, const char* Format)
+void HD44780_WriteNumber(uint8_t X, uint8_t Y,
+		DisplayedNumber* Number,
+		const char* Format)
 {
-	if (Number == DisplayedNumber)
+	if (Number->Value == Number->DisplayedValue)
 	{
 		return;
 	}
 
 	char str[10];
 
-	sprintf(str, Format, Number);
+	sprintf(str, Format, Number->Value);
 
-	HD44780_ClearRegion(X, Y, LastNumberLength);
+	HD44780_ClearRegion(X, Y, Number->DisplayedValueLength);
 
 	HD44780_WriteString(X, Y, str);
 
-	LastNumberLength = strlen(str);
-	DisplayedNumber = Number;
+	Number->DisplayedValueLength = strlen(str);
+	Number->DisplayedValue = Number->Value;
 }
 
 

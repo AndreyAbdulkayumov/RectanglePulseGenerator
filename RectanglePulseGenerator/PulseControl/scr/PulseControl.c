@@ -3,6 +3,9 @@
 void (*Period_Start_Action) (void) = NULL;
 void (*DutyCycle_End_Action) (void) = NULL;
 
+uint32_t Period_PreparedValue;
+uint32_t DutyCycle_PreparedValue;
+
 void PulseControl_Init(
 		void (*Period_Start_Handler) (void),
 		void (*DutyCycle_End_Handler) (void)
@@ -53,12 +56,18 @@ void PulseControl_Init(
 	NVIC_EnableIRQ(Timer_DutyCycle_IRQ);  // Регистрация прерывания в контроллере NVIC
 }
 
-void PulseControl_Generation_Start(void)
+void PulseControl_Generation_Start(uint32_t Period_InitValue, uint32_t DutyCycle_InitValue)
 {
 	if (Period_Start_Action != NULL)
 	{
 		Period_Start_Action();
 	}
+
+    Period_PreparedValue = Period_InitValue;
+    DutyCycle_PreparedValue = DutyCycle_InitValue;
+
+    Timer_Period->ARR = Period_PreparedValue;
+    Timer_DutyCycle->ARR = DutyCycle_PreparedValue;
 
 	// Запуск счета таймеров
 	Timer_Period->CR1 |= TIM_CR1_CEN;
@@ -74,17 +83,45 @@ void PulseControl_Generation_Stop(void)
 
 void PulseControl_SetPeriod_us(uint32_t PeriodValue)
 {
-	if (PeriodValue < 1000000)
+	if (PeriodValue >= 1000000)
 	{
-		Timer_Period->ARR = PeriodValue;
+		return;
+	}
+
+	if (PeriodValue == 0)
+	{
+		Timer_Period->CR1 &= ~(TIM_CR1_CEN);
+		Timer_Period->SR &= ~(TIM_SR_UIF);  // Сброс флаг прерывания
+		return;
+	}
+
+	Period_PreparedValue = PeriodValue;
+
+	if ((Timer_Period->CR1 & TIM_CR1_CEN) == 0)
+	{
+		Timer_Period->CR1 |= TIM_CR1_CEN;
 	}
 }
 
 void PulseControl_SetDutyCycle_us(uint32_t DutyCycleValue)
 {
-	if (DutyCycleValue < 1000)
+	if (DutyCycleValue >= 1000)
 	{
-		Timer_DutyCycle->ARR = DutyCycleValue;
+		return;
+	}
+
+	if (DutyCycleValue == 0)
+	{
+		Timer_DutyCycle->CR1 &= ~(TIM_CR1_CEN);
+		Timer_DutyCycle->SR &= ~(TIM_SR_UIF);  // Сброс флаг прерывания
+		return;
+	}
+
+	DutyCycle_PreparedValue = DutyCycleValue;
+
+	if ((Timer_DutyCycle->CR1 & TIM_CR1_CEN) == 0)
+	{
+		Timer_DutyCycle->CR1 |= TIM_CR1_CEN;
 	}
 }
 
@@ -98,6 +135,7 @@ void TIM2_IRQHandler(void)
 		Period_Start_Action();
 	}
 
+	Timer_Period->ARR = Period_PreparedValue;
 	Timer_DutyCycle->CR1 |= TIM_CR1_CEN;  // Запуск таймера
 }
 
@@ -110,4 +148,6 @@ void TIM5_IRQHandler(void)
 	{
 		DutyCycle_End_Action();
 	}
+
+	Timer_DutyCycle->ARR = DutyCycle_PreparedValue;
 }

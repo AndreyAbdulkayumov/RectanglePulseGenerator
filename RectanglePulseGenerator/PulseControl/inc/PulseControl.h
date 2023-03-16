@@ -14,7 +14,7 @@ void PulseControl_Init(
 		void (*Period_Start_Handler) (void),
 		void (*DutyCycle_End_Handler) (void)
 		);
-void PulseControl_Generation_Start(void);
+void PulseControl_Generation_Start(uint32_t Period_InitValue, uint32_t DutyCycle_InitValue);
 void PulseControl_Generation_Stop(void);
 void PulseControl_SetPeriod_us(uint32_t PeriodValue);
 void PulseControl_SetDutyCycle_us(uint32_t DutyCycleValue);
