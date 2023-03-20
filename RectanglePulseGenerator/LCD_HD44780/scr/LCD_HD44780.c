@@ -128,13 +128,15 @@ void HD44780_Init_I2C(I2C_HandleTypeDef* Module, uint8_t Address,
 
 	// Первоначальные команды для контроллера дисплея
 	HAL_Delay(500);
-	SendCommand(0x30);
+	SendCommand(0x38);
 	HAL_Delay(10);
-	SendCommand(0x30);
+	SendCommand(0x38);
 	HAL_Delay(10);
-	SendCommand(0x30);
+	SendCommand(0x38);
 	HAL_Delay(1);
-	SendCommand_Without_BF(32);
+	SendCommand_Without_BF(0x38);
+
+	SendCommand(0x02);
 
 	// Первоначальная настройка
 
@@ -182,12 +184,19 @@ void HD44780_Init_I2C(I2C_HandleTypeDef* Module, uint8_t Address,
 
 void HD44780_SetCursor(uint8_t x, uint8_t y)
 {
-	if (y > 0 && y <= 2)
-	{
-		int CursorPosition = 0x80 + 0x40 * (y - 1) + (x - 1);
+	int CursorPosition = 0;
 
-		SendCommand(CursorPosition);
+	if (y == 1 || y == 2)
+	{
+		CursorPosition = 0x80 + 0x40 * (y - 1) + (x - 1);
 	}
+
+	else if (y == 3 || y == 4)
+	{
+		CursorPosition = 0x94 + 0x40 * (y - 3) + (x - 1);
+	}
+
+	SendCommand(CursorPosition);
 }
 
 

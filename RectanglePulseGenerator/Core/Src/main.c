@@ -55,7 +55,7 @@ struct FieldValue
 
 struct FieldValue Period =
 {
-		.X = 5,
+		.X = 12,
 		.Y = 1,
 
 		.Number =
@@ -76,8 +76,8 @@ struct FieldValue Period =
 
 struct FieldValue DutyCycle =
 {
-		.X = 13,
-		.Y = 1,
+		.X = 12,
+		.Y = 2,
 
 		.Number =
 		{
@@ -97,8 +97,8 @@ struct FieldValue DutyCycle =
 
 struct FieldValue Amplitude =
 {
-		.X = 5,
-		.Y = 2,
+		.X = 12,
+		.Y = 3,
 
 
 		.Number =
@@ -240,25 +240,31 @@ int main(void)
   MX_DAC_Init();
   /* USER CODE BEGIN 2 */
 
-  // I2C Address: 0x3F или 0x27
+  // I2C Address: 0x3F or 0x27
   HD44780_Init_I2C(&hi2c1, 0x3F, TwoLines, Rectangle);
 
   IncrementalEncoder_Init();
 
-  HD44780_WriteString(1, 1, "Per");
+  HD44780_WriteString(1, 1, "Period");
 
   HD44780_WriteNumber(Period.X, Period.Y,
 		  &Period.Number, Period.Format);
 
-  HD44780_WriteString(9, 1, "DuC");
+  HD44780_WriteString(17, 1, "ms");
+
+  HD44780_WriteString(1, 2, "DutyCycle");
 
   HD44780_WriteNumber(DutyCycle.X, DutyCycle.Y,
 		  &DutyCycle.Number, DutyCycle.Format);
 
-  HD44780_WriteString(1, 2, "Amp");
+  HD44780_WriteString(17, 2, "us");
+
+  HD44780_WriteString(1, 3, "Amplitude");
 
   HD44780_WriteNumber(Amplitude.X, Amplitude.Y,
 		  &Amplitude.Number, Amplitude.Format);
+
+  HD44780_WriteString(17, 3, "V");
 
   SelectedField = &Period;
   IncrementalEncoder_SetInitialValue(SelectedField->Number.Value / SelectedField->Additive);
