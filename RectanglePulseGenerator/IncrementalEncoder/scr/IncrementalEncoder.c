@@ -5,6 +5,8 @@
 
 uint32_t Value = 0;
 
+uint32_t Current_CNT = 0;
+
 
 void IncrementalEncoder_Init(void)
 {
@@ -89,6 +91,36 @@ uint32_t IncrementalEncoder_GetValue(uint32_t MaxValue)
 	}
 
 	return Value;
+}
+
+void IncrementalEncoder_GetValue_FromCallback(
+		void (*EventHandler) (uint32_t),
+		uint32_t MaxValue)
+{
+	if (Current_CNT == TIM1->CNT)
+	{
+		return;
+	}
+
+	if (Value == 0 && (TIM1->CR1 & TIM_CR1_DIR) != 0)
+	{
+		TIM1->CNT = 0;
+	}
+
+	else
+	{
+		Value = TIM1->CNT * 0.25;
+	}
+
+	if (Value >= MaxValue)
+	{
+		Value = 0;
+		TIM1->CNT = 0;
+	}
+
+	EventHandler(Value);
+
+	Current_CNT = TIM1->CNT;
 }
 
 void IncrementalEncoder_SetInitialValue(uint32_t InitialValue)
