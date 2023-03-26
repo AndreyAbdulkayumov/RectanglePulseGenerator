@@ -38,7 +38,9 @@ typedef enum
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define NumberOfFields 18
 
+const double Vref = 2.91;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,241 +62,110 @@ struct FieldValue
 
 struct MultiDigitNumber
 {
+	uint8_t X;
+	uint8_t Y;
+
 	struct FieldValue* AllFields[7];
+
+	uint8_t AmountOfDigits;
+
 	double Value;
+	double MaxValue;
 };
 
-struct FieldValue Period =
-{
-		.X = 12,
-		.Y = 1,
+struct FieldValue Amplitude_Digit_1;
+struct FieldValue Amplitude_Digit_2;
+struct FieldValue Amplitude_Digit_3;
+struct FieldValue Amplitude_Digit_4;
 
-		.Number =
-		{
-				.Value = 10,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
+struct FieldValue Period_Digit_1;
+struct FieldValue Period_Digit_2;
+struct FieldValue Period_Digit_3;
+struct FieldValue Period_Digit_4;
+struct FieldValue Period_Digit_5;
+struct FieldValue Period_Digit_6;
+struct FieldValue Period_Digit_7;
 
-		.MaxValue = 100,
+struct FieldValue DutyCycle_Digit_1;
+struct FieldValue DutyCycle_Digit_2;
+struct FieldValue DutyCycle_Digit_3;
+struct FieldValue DutyCycle_Digit_4;
+struct FieldValue DutyCycle_Digit_5;
+struct FieldValue DutyCycle_Digit_6;
+struct FieldValue DutyCycle_Digit_7;
 
-		.ValueMultiplier = 1000,
-
-		.Additive = 10,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue DutyCycle =
-{
-		.X = 12,
-		.Y = 2,
-
-		.Number =
-		{
-				.Value = 10000,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 1000000,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 100,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Amplitude =
-{
-		.X = 12,
-		.Y = 3,
-
-
-		.Number =
-		{
-				.Value = 2,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 2.9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 0.1,
-
-		.Format = "%.1f"
-};
-
-struct FieldValue Test_1 =
-{
-		.X = 9,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Test_2 =
-{
-		.X = 11,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Test_3 =
-{
-		.X = 12,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Test_4 =
-{
-		.X = 13,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Test_5 =
-{
-		.X = 15,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Test_6 =
-{
-		.X = 16,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 0
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue Test_7 =
-{
-		.X = 17,
-		.Y = 4,
-
-		.Number =
-		{
-				.Value = 0,
-				.DisplayedValue = -1,
-				.DisplayedValueLength = 1
-		},
-
-		.MaxValue = 9,
-
-		.ValueMultiplier = 1,
-
-		.Additive = 1,
-
-		.Format = "%.0f"
-};
-
-struct FieldValue* AllFields[10] =
-{
-		&Period, &DutyCycle, &Amplitude,
-		&Test_1,
-		&Test_2, &Test_3, &Test_4,
-		&Test_5, &Test_6, &Test_7
-};
-
-
-struct MultiDigitNumber TestNumber =
-{
-		.AllFields = {
-				&Test_1,
-				&Test_2, &Test_3, &Test_4,
-				&Test_5, &Test_6, &Test_7
-		},
-		.Value = 0
-};
 
 struct FieldValue* SelectedField;
+
+
+struct MultiDigitNumber Period =
+{
+		.X = 9,
+		.Y = 1,
+
+		.AllFields = {
+				&Period_Digit_1,
+				&Period_Digit_2, &Period_Digit_3, &Period_Digit_4,
+				&Period_Digit_5, &Period_Digit_6, &Period_Digit_7
+		},
+
+		.AmountOfDigits = 7,
+
+		.Value = 0,
+		.MaxValue = 156123    // us
+};
+
+struct MultiDigitNumber DutyCycle =
+{
+		.X = 9,
+		.Y = 2,
+
+		.AllFields = {
+				&DutyCycle_Digit_1,
+				&DutyCycle_Digit_2, &DutyCycle_Digit_3, &DutyCycle_Digit_4,
+				&DutyCycle_Digit_5, &DutyCycle_Digit_6, &DutyCycle_Digit_7
+		},
+
+		.AmountOfDigits = 7,
+
+		.Value = 0,
+		.MaxValue = 156123    // us
+};
+
+struct MultiDigitNumber Amplitude =
+{
+		.X = 13,
+		.Y = 3,
+
+		.AllFields = {
+				&Amplitude_Digit_1,
+				&Amplitude_Digit_2, &Amplitude_Digit_3, &Amplitude_Digit_4
+		},
+
+		.AmountOfDigits = 4,
+
+		.Value = 0,
+		.MaxValue = Vref * 1000    // mV
+};
+
+struct MultiDigitNumber* SelectedVariable = &Period;
+
+
+
+struct FieldValue* AllFields[NumberOfFields] =
+{
+		&Period_Digit_1,
+		&Period_Digit_2, &Period_Digit_3, &Period_Digit_4,
+		&Period_Digit_5, &Period_Digit_6, &Period_Digit_7,
+
+		&DutyCycle_Digit_1,
+		&DutyCycle_Digit_2, &DutyCycle_Digit_3, &DutyCycle_Digit_4,
+		&DutyCycle_Digit_5, &DutyCycle_Digit_6, &DutyCycle_Digit_7,
+
+		&Amplitude_Digit_1,
+		&Amplitude_Digit_2, &Amplitude_Digit_3, &Amplitude_Digit_4
+};
+
 
 EncoderChangeMode CurrentChangeMode = Field;
 
@@ -310,8 +181,6 @@ I2C_HandleTypeDef hi2c1;
 uint8_t FieldCounter = 1;
 
 uint8_t ButtonPressed = 0;
-
-const double Vref = 2.91;
 
 uint32_t DAC_Code = 0;
 
@@ -333,19 +202,23 @@ static void MX_DAC_Init(void);
 
 void ChangeField(void)
 {
-	//FieldCounter++;
-/*
-	if (FieldCounter > 6)
+	if (FieldCounter >= 1 && FieldCounter <= 7)
 	{
-		FieldCounter = 1;
+		SelectedVariable = &Period;
 	}
-*/
+
+	else if (FieldCounter >= 8 && FieldCounter <= 14)
+	{
+		SelectedVariable = &DutyCycle;
+	}
+
+	else
+	{
+		SelectedVariable = &Amplitude;
+	}
+
 	SelectedField = AllFields[FieldCounter - 1];
-/*
-	HD44780_SetCursor(
-			SelectedField->X + SelectedField->Number.DisplayedValueLength,
-			SelectedField->Y);
-*/
+
 	HD44780_SetCursor(
 			SelectedField->X,
 			SelectedField->Y);
@@ -354,8 +227,13 @@ void ChangeField(void)
 			SelectedField->Number.Value / SelectedField->Additive);
 }
 
-uint32_t DAC_GetCodeFrom(double Value)
+uint32_t DAC_GetCodeFrom_Volt(double Value)
 {
+	if (Value >= Vref)
+	{
+		return 4095;
+	}
+
 	return Value * 4095 / Vref;
 }
 
@@ -377,19 +255,40 @@ void DutyCycle_End_Handler(void)
 			0);
 }
 
-void CalculateValue()
+double CalculateValue(struct MultiDigitNumber* Number)
 {
-	TestNumber.Value = 0;
+	double Value = 0;
 
-	for (int i = 0; i < 7; i++)
+	for (int i = 0; i < Number->AmountOfDigits; i++)
 	{
-		TestNumber.Value += TestNumber.AllFields[i]->Number.Value * pow(10, 6 - i);
+		Value += Number->AllFields[i]->Number.Value *
+				pow(10, Number->AmountOfDigits - 1 - i);
 	}
+
+	return Value;
 }
 
 void DisplayUpdate(uint32_t Value)
 {
+	double CalculatingValue = 0;
+
+	double OldValue = SelectedField->Number.Value;
+
 	SelectedField->Number.Value = Value * SelectedField->Additive;
+
+	CalculatingValue = CalculateValue(SelectedVariable);
+
+	if (CalculatingValue > SelectedVariable->MaxValue)
+	{
+		SelectedField->Number.Value = OldValue;
+
+		IncrementalEncoder_SetInitialValue(
+				SelectedField->Number.Value / SelectedField->Additive);
+
+		CalculatingValue = CalculateValue(SelectedVariable);
+	}
+
+	SelectedVariable->Value = CalculatingValue;
 
 	HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
 			&SelectedField->Number, SelectedField->Format);
@@ -400,11 +299,12 @@ void DisplayUpdate(uint32_t Value)
 
 	if (FieldCounter > 3)
 	{
-		CalculateValue();
+		//CalculateValue();
 	}
 
 	else
 	{
+		/*
 		BufferValue = SelectedField->Number.Value * SelectedField->ValueMultiplier;
 
 		if (SelectedField == &Amplitude)
@@ -421,25 +321,52 @@ void DisplayUpdate(uint32_t Value)
 		{
 			PulseControl_SetDutyCycle_us((uint32_t)BufferValue);
 		}
+		*/
 	}
 }
 
-void DisplayMultidigitNumber(struct MultiDigitNumber Value)
+void InitMultiDigitNumber(struct MultiDigitNumber Value)
 {
-	for (int i = 0; i < 7; i++)
+	uint8_t Position_X_Offset = 0;
+
+	for (int i = 0; i < Value.AmountOfDigits; i++)
 	{
+		*Value.AllFields[i] = (struct FieldValue)
+		{
+				.X = Value.X + Position_X_Offset + i,
+				.Y = Value.Y,
+
+				.Number =
+				{
+						.Value = 0,
+						.DisplayedValue = -1,
+						.DisplayedValueLength = 1
+				},
+
+				.MaxValue = 9,
+
+				.ValueMultiplier = 1,
+
+				.Additive = 1,
+
+				.Format = "%.0f"
+		};
+
 		HD44780_WriteNumber(
 				Value.AllFields[i]->X,
 				Value.AllFields[i]->Y,
 				&Value.AllFields[i]->Number,
 				Value.AllFields[i]->Format);
 
-		if (i == 0 || i == 3)
+		if ((i == 0 && Value.AmountOfDigits != 1) ||
+			(i == 3 && Value.AmountOfDigits != 4))
 		{
 			HD44780_WriteString(
 					Value.AllFields[i]->X + 1,
 					Value.AllFields[i]->Y,
 					".");
+
+			Position_X_Offset++;
 		}
 	}
 }
@@ -482,46 +409,56 @@ int main(void)
 
   IncrementalEncoder_Init();
 
+  /**********************************/
+  //
+  // Period
+  //
+  /**********************************/
+
   HD44780_WriteString(1, 1, "Period");
 
-  HD44780_WriteNumber(Period.X, Period.Y,
-		  &Period.Number, Period.Format);
+  InitMultiDigitNumber(Period);
 
-  HD44780_WriteString(17, 1, "ms");
+  HD44780_WriteString(19, 1, "us");
 
-  HD44780_WriteString(1, 2, "DutyCycle");
+  /**********************************/
+  //
+  // DutyCycle
+  //
+  /**********************************/
 
-  HD44780_WriteNumber(DutyCycle.X, DutyCycle.Y,
-		  &DutyCycle.Number, DutyCycle.Format);
+  HD44780_WriteString(1, 2, "DuCycl");
 
-  //HD44780_WriteString(17, 2, "us");
+  InitMultiDigitNumber(DutyCycle);
+
+  HD44780_WriteString(19, 2, "us");
+
+  /**********************************/
+  //
+  // Amplitude
+  //
+  /**********************************/
 
   HD44780_WriteString(1, 3, "Amplitude");
 
-  HD44780_WriteNumber(Amplitude.X, Amplitude.Y,
-		  &Amplitude.Number, Amplitude.Format);
+  InitMultiDigitNumber(Amplitude);
 
-  HD44780_WriteString(17, 3, "V");
+  HD44780_WriteString(19, 3, "mV");
 
+  /**********************************/
+  //
+  // Other Settings
+  //
+  /**********************************/
 
-
-  HD44780_WriteString(1, 4, "DuCycl");
-
-  DisplayMultidigitNumber(TestNumber);
-
-  HD44780_WriteString(19, 4, "us");
-
-
-
-
-  SelectedField = &Period;
+  SelectedField = AllFields[0];
   IncrementalEncoder_SetInitialValue(SelectedField->Number.Value / SelectedField->Additive);
 
   HD44780_SetCursor(
-		  SelectedField->X + SelectedField->Number.DisplayedValueLength,
+		  SelectedField->X,
 		  SelectedField->Y);
 
-  DAC_Code = DAC_GetCodeFrom(Amplitude.Number.Value);
+  DAC_Code = DAC_GetCodeFrom_Volt(Amplitude.Value / 1000);
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 
   PulseControl_Init(Period_Start_Handler, DutyCycle_End_Handler);
@@ -576,7 +513,7 @@ int main(void)
 	  if (CurrentChangeMode == Field)
 	  {
 		  qw = IncrementalEncoder_GetValue(
-				  (10 + 1) / 1) * 1;
+				  (NumberOfFields + 1) / 1) * 1;
 
 		  if (qw == 0)
 		  {
@@ -588,7 +525,7 @@ int main(void)
 		  {
 			  FieldCounter = qw;
 
-				if (FieldCounter > 10)
+				if (FieldCounter > NumberOfFields)
 				{
 					FieldCounter = 1;
 					qw = 1;
@@ -598,7 +535,6 @@ int main(void)
 				HD44780_SetCursor(
 							AllFields[FieldCounter - 1]->X,
 							AllFields[FieldCounter - 1]->Y);
-
 		  }
 	  }
 
