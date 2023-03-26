@@ -83,11 +83,12 @@ void PulseControl_Generation_Stop(void)
 
 void PulseControl_SetPeriod_us(uint32_t PeriodValue)
 {
+	/*
 	if (PeriodValue >= 1000000)
 	{
 		return;
 	}
-
+	*/
 	if (PeriodValue == 0)
 	{
 		Timer_Period->CR1 &= ~(TIM_CR1_CEN);
@@ -105,11 +106,12 @@ void PulseControl_SetPeriod_us(uint32_t PeriodValue)
 
 void PulseControl_SetDutyCycle_us(uint32_t DutyCycleValue)
 {
+	/*
 	if (DutyCycleValue >= 1000)
 	{
 		return;
 	}
-
+	*/
 	if (DutyCycleValue == 0)
 	{
 		Timer_DutyCycle->CR1 &= ~(TIM_CR1_CEN);

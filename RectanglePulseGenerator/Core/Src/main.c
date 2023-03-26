@@ -111,8 +111,8 @@ struct MultiDigitNumber Period =
 
 		.AmountOfDigits = 7,
 
-		.Value = 0,
-		.MaxValue = 156123    // us
+		.Value = 100000,
+		.MaxValue = 1000000    // us
 };
 
 struct MultiDigitNumber DutyCycle =
@@ -128,8 +128,8 @@ struct MultiDigitNumber DutyCycle =
 
 		.AmountOfDigits = 7,
 
-		.Value = 0,
-		.MaxValue = 156123    // us
+		.Value = 458,
+		.MaxValue = 1000000    // us
 };
 
 struct MultiDigitNumber Amplitude =
@@ -144,7 +144,7 @@ struct MultiDigitNumber Amplitude =
 
 		.AmountOfDigits = 4,
 
-		.Value = 0,
+		.Value = 2000,
 		.MaxValue = Vref * 1000    // mV
 };
 
@@ -297,37 +297,32 @@ void DisplayUpdate(uint32_t Value)
 			SelectedField->X,
 			SelectedField->Y);
 
-	if (FieldCounter > 3)
+	if (SelectedVariable == &Period)
 	{
-		//CalculateValue();
+		PulseControl_SetPeriod_us((uint32_t)Period.Value);
 	}
 
-	else
+	else if (SelectedVariable == &DutyCycle)
 	{
-		/*
-		BufferValue = SelectedField->Number.Value * SelectedField->ValueMultiplier;
+		PulseControl_SetDutyCycle_us((uint32_t)DutyCycle.Value);
+	}
 
-		if (SelectedField == &Amplitude)
-		{
-			DAC_Code = DAC_GetCodeFrom(BufferValue);
-		}
-
-		else if (SelectedField == &Period)
-		{
-			PulseControl_SetPeriod_us((uint32_t)BufferValue);
-		}
-
-		else if (SelectedField == &DutyCycle)
-		{
-			PulseControl_SetDutyCycle_us((uint32_t)BufferValue);
-		}
-		*/
+	else if (SelectedVariable == &Amplitude)
+	{
+		DAC_Code = DAC_GetCodeFrom_Volt(Amplitude.Value / 1000);
 	}
 }
 
 void InitMultiDigitNumber(struct MultiDigitNumber Value)
 {
 	uint8_t Position_X_Offset = 0;
+
+	double SplitDigits[Value.AmountOfDigits];
+
+	for (int i = 0; i < Value.AmountOfDigits; i++)
+	{
+		SplitDigits[i] = (int)(((int)Value.Value % (int)pow(10, (i + 1))) / pow(10, i));
+	}
 
 	for (int i = 0; i < Value.AmountOfDigits; i++)
 	{
@@ -338,7 +333,7 @@ void InitMultiDigitNumber(struct MultiDigitNumber Value)
 
 				.Number =
 				{
-						.Value = 0,
+						.Value = SplitDigits[Value.AmountOfDigits - 1 - i],
 						.DisplayedValue = -1,
 						.DisplayedValueLength = 1
 				},
@@ -464,8 +459,8 @@ int main(void)
   PulseControl_Init(Period_Start_Handler, DutyCycle_End_Handler);
 
   PulseControl_Generation_Start(
-		  (uint32_t)(SelectedField->Number.Value * 1000),
-		  (uint32_t)SelectedField->Number.Value);
+		  (uint32_t)(Period.Value),
+		  (uint32_t)DutyCycle.Value);
 
   double qw = FieldCounter;
 
