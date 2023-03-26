@@ -58,6 +58,11 @@ struct FieldValue
 	char* Format;
 };
 
+struct MultiDigitNumber
+{
+	struct FieldValue* AllFields[7];
+	double Value;
+};
 
 struct FieldValue Period =
 {
@@ -278,13 +283,16 @@ struct FieldValue* AllFields[10] =
 		&Test_5, &Test_6, &Test_7
 };
 
-struct FieldValue* TestNumber_Fields[7] = {
-		&Test_1,
-		&Test_2, &Test_3, &Test_4,
-		&Test_5, &Test_6, &Test_7
-};
 
-double TestNumber_Value = 0;
+struct MultiDigitNumber TestNumber =
+{
+		.AllFields = {
+				&Test_1,
+				&Test_2, &Test_3, &Test_4,
+				&Test_5, &Test_6, &Test_7
+		},
+		.Value = 0
+};
 
 struct FieldValue* SelectedField;
 
@@ -322,6 +330,7 @@ static void MX_DAC_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 void ChangeField(void)
 {
 	//FieldCounter++;
@@ -368,44 +377,72 @@ void DutyCycle_End_Handler(void)
 			0);
 }
 
-void DisplayUpdate(uint32_t Value)
-{
-	  SelectedField->Number.Value = Value *
-					  SelectedField->Additive;
-
-	  HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
-			  &SelectedField->Number, SelectedField->Format);
-
-		HD44780_SetCursor(
-				SelectedField->X,
-				SelectedField->Y);
-
-	  BufferValue = SelectedField->Number.Value * SelectedField->ValueMultiplier;
-
-	  if (SelectedField == &Amplitude)
-	  {
-		  DAC_Code = DAC_GetCodeFrom(BufferValue);
-	  }
-
-	  else if (SelectedField == &Period)
-	  {
-		  PulseControl_SetPeriod_us((uint32_t)BufferValue);
-	  }
-
-	  else if (SelectedField == &DutyCycle)
-	  {
-		  PulseControl_SetDutyCycle_us((uint32_t)BufferValue);
-	  }
-}
-
 void CalculateValue()
 {
+	TestNumber.Value = 0;
+
 	for (int i = 0; i < 7; i++)
 	{
-		TestNumber_Value += TestNumber_Fields[i]->Number.Value * pow(10, i);
+		TestNumber.Value += TestNumber.AllFields[i]->Number.Value * pow(10, 6 - i);
 	}
 }
 
+void DisplayUpdate(uint32_t Value)
+{
+	SelectedField->Number.Value = Value * SelectedField->Additive;
+
+	HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
+			&SelectedField->Number, SelectedField->Format);
+
+	HD44780_SetCursor(
+			SelectedField->X,
+			SelectedField->Y);
+
+	if (FieldCounter > 3)
+	{
+		CalculateValue();
+	}
+
+	else
+	{
+		BufferValue = SelectedField->Number.Value * SelectedField->ValueMultiplier;
+
+		if (SelectedField == &Amplitude)
+		{
+			DAC_Code = DAC_GetCodeFrom(BufferValue);
+		}
+
+		else if (SelectedField == &Period)
+		{
+			PulseControl_SetPeriod_us((uint32_t)BufferValue);
+		}
+
+		else if (SelectedField == &DutyCycle)
+		{
+			PulseControl_SetDutyCycle_us((uint32_t)BufferValue);
+		}
+	}
+}
+
+void DisplayMultidigitNumber(struct MultiDigitNumber Value)
+{
+	for (int i = 0; i < 7; i++)
+	{
+		HD44780_WriteNumber(
+				Value.AllFields[i]->X,
+				Value.AllFields[i]->Y,
+				&Value.AllFields[i]->Number,
+				Value.AllFields[i]->Format);
+
+		if (i == 0 || i == 3)
+		{
+			HD44780_WriteString(
+					Value.AllFields[i]->X + 1,
+					Value.AllFields[i]->Y,
+					".");
+		}
+	}
+}
 /* USER CODE END 0 */
 
 /**
@@ -466,23 +503,16 @@ int main(void)
 
   HD44780_WriteString(17, 3, "V");
 
+
+
   HD44780_WriteString(1, 4, "DuCycl");
 
-  HD44780_WriteNumber(Test_1.X, Test_1.Y, &Test_1.Number, Test_1.Format);
-
-  HD44780_WriteString(10, 4, ".");
-
-  HD44780_WriteNumber(Test_2.X, Test_2.Y, &Test_2.Number, Test_2.Format);
-  HD44780_WriteNumber(Test_3.X, Test_3.Y, &Test_3.Number, Test_3.Format);
-  HD44780_WriteNumber(Test_4.X, Test_4.Y, &Test_4.Number, Test_4.Format);
-
-  HD44780_WriteString(14, 4, ".");
-
-  HD44780_WriteNumber(Test_5.X, Test_5.Y, &Test_5.Number, Test_5.Format);
-  HD44780_WriteNumber(Test_6.X, Test_6.Y, &Test_6.Number, Test_6.Format);
-  HD44780_WriteNumber(Test_7.X, Test_7.Y, &Test_7.Number, Test_7.Format);
+  DisplayMultidigitNumber(TestNumber);
 
   HD44780_WriteString(19, 4, "us");
+
+
+
 
   SelectedField = &Period;
   IncrementalEncoder_SetInitialValue(SelectedField->Number.Value / SelectedField->Additive);
@@ -574,14 +604,12 @@ int main(void)
 
 	  else
 	  {
-		  IncrementalEncoder_GetValue_FromCallback(
-				  DisplayUpdate,
+		  IncrementalEncoder_GetValue_FromCallback(DisplayUpdate,
 				  ((SelectedField->MaxValue + SelectedField->Additive) /
 				  SelectedField->Additive));
 	  }
 
 	  HAL_Delay(100);
-
   }
   /* USER CODE END 3 */
 }
