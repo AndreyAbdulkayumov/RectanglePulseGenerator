@@ -24,6 +24,8 @@
 #include "LCD_HD44780.h"
 #include "IncrementalEncoder.h"
 #include "PulseControl.h"
+#include "UI.h"
+
 #include <Math.h>
 /* USER CODE END Includes */
 
@@ -38,136 +40,14 @@ typedef enum
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define NumberOfFields 18
 
 const double Vref = 2.91;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-struct FieldValue
-{
-	uint8_t X;
-	uint8_t Y;
 
-	DisplayedNumber Number;
-	double MaxValue;
-
-	double ValueMultiplier;
-
-	double Additive;
-
-	char* Format;
-};
-
-struct MultiDigitNumber
-{
-	uint8_t X;
-	uint8_t Y;
-
-	struct FieldValue* AllFields[7];
-
-	uint8_t AmountOfDigits;
-
-	double Value;
-	double MaxValue;
-};
-
-struct FieldValue Amplitude_Digit_1;
-struct FieldValue Amplitude_Digit_2;
-struct FieldValue Amplitude_Digit_3;
-struct FieldValue Amplitude_Digit_4;
-
-struct FieldValue Period_Digit_1;
-struct FieldValue Period_Digit_2;
-struct FieldValue Period_Digit_3;
-struct FieldValue Period_Digit_4;
-struct FieldValue Period_Digit_5;
-struct FieldValue Period_Digit_6;
-struct FieldValue Period_Digit_7;
-
-struct FieldValue DutyCycle_Digit_1;
-struct FieldValue DutyCycle_Digit_2;
-struct FieldValue DutyCycle_Digit_3;
-struct FieldValue DutyCycle_Digit_4;
-struct FieldValue DutyCycle_Digit_5;
-struct FieldValue DutyCycle_Digit_6;
-struct FieldValue DutyCycle_Digit_7;
-
-
-struct FieldValue* SelectedField;
-
-
-struct MultiDigitNumber Period =
-{
-		.X = 9,
-		.Y = 1,
-
-		.AllFields = {
-				&Period_Digit_1,
-				&Period_Digit_2, &Period_Digit_3, &Period_Digit_4,
-				&Period_Digit_5, &Period_Digit_6, &Period_Digit_7
-		},
-
-		.AmountOfDigits = 7,
-
-		.Value = 100000,
-		.MaxValue = 1000000    // us
-};
-
-struct MultiDigitNumber DutyCycle =
-{
-		.X = 9,
-		.Y = 2,
-
-		.AllFields = {
-				&DutyCycle_Digit_1,
-				&DutyCycle_Digit_2, &DutyCycle_Digit_3, &DutyCycle_Digit_4,
-				&DutyCycle_Digit_5, &DutyCycle_Digit_6, &DutyCycle_Digit_7
-		},
-
-		.AmountOfDigits = 7,
-
-		.Value = 458,
-		.MaxValue = 1000000    // us
-};
-
-struct MultiDigitNumber Amplitude =
-{
-		.X = 13,
-		.Y = 3,
-
-		.AllFields = {
-				&Amplitude_Digit_1,
-				&Amplitude_Digit_2, &Amplitude_Digit_3, &Amplitude_Digit_4
-		},
-
-		.AmountOfDigits = 4,
-
-		.Value = 2000,
-		.MaxValue = Vref * 1000    // mV
-};
-
-struct MultiDigitNumber* SelectedVariable = &Period;
-
-
-
-struct FieldValue* AllFields[NumberOfFields] =
-{
-		&Period_Digit_1,
-		&Period_Digit_2, &Period_Digit_3, &Period_Digit_4,
-		&Period_Digit_5, &Period_Digit_6, &Period_Digit_7,
-
-		&DutyCycle_Digit_1,
-		&DutyCycle_Digit_2, &DutyCycle_Digit_3, &DutyCycle_Digit_4,
-		&DutyCycle_Digit_5, &DutyCycle_Digit_6, &DutyCycle_Digit_7,
-
-		&Amplitude_Digit_1,
-		&Amplitude_Digit_2, &Amplitude_Digit_3, &Amplitude_Digit_4
-};
-
-
-EncoderChangeMode CurrentChangeMode = Field;
+EncoderChangeMode CurrentChangeMode;
 
 /* USER CODE END PM */
 
@@ -178,13 +58,20 @@ I2C_HandleTypeDef hi2c1;
 
 /* USER CODE BEGIN PV */
 
-uint8_t FieldCounter = 1;
+extern struct MultiDigitNumber Period;
+extern struct MultiDigitNumber DutyCycle;
+extern struct MultiDigitNumber Amplitude;
 
-uint8_t ButtonPressed = 0;
+extern struct MultiDigitNumber* SelectedVariable;
+extern struct FieldValue* SelectedField;
+
+
+uint8_t FieldNumber = 1;
 
 uint32_t DAC_Code = 0;
 
-double BufferValue = 0;
+double CachedValue = 0;
+double CachedFieldValue = 0;
 
 /* USER CODE END PV */
 
@@ -200,33 +87,7 @@ static void MX_DAC_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void ChangeField(void)
-{
-	if (FieldCounter >= 1 && FieldCounter <= 7)
-	{
-		SelectedVariable = &Period;
-	}
-
-	else if (FieldCounter >= 8 && FieldCounter <= 14)
-	{
-		SelectedVariable = &DutyCycle;
-	}
-
-	else
-	{
-		SelectedVariable = &Amplitude;
-	}
-
-	SelectedField = AllFields[FieldCounter - 1];
-
-	HD44780_SetCursor(
-			SelectedField->X,
-			SelectedField->Y);
-
-	IncrementalEncoder_SetInitialValue(
-			SelectedField->Number.Value / SelectedField->Additive);
-}
-
+// 4095 - максимальное значение для 12 - разрядного ЦАП
 uint32_t DAC_GetCodeFrom_Volt(double Value)
 {
 	if (Value >= Vref)
@@ -237,6 +98,7 @@ uint32_t DAC_GetCodeFrom_Volt(double Value)
 	return Value * 4095 / Vref;
 }
 
+
 void Period_Start_Handler(void)
 {
 	HAL_DAC_SetValue(
@@ -245,6 +107,7 @@ void Period_Start_Handler(void)
 			DAC_ALIGN_12B_R,
 			DAC_Code);
 }
+
 
 void DutyCycle_End_Handler(void)
 {
@@ -255,47 +118,23 @@ void DutyCycle_End_Handler(void)
 			0);
 }
 
-double CalculateValue(struct MultiDigitNumber* Number)
+
+void ChangeField(void)
 {
-	double Value = 0;
+	UI_ChangeField(FieldNumber);
 
-	for (int i = 0; i < Number->AmountOfDigits; i++)
-	{
-		Value += Number->AllFields[i]->Number.Value *
-				pow(10, Number->AmountOfDigits - 1 - i);
-	}
-
-	return Value;
+	IncrementalEncoder_SetInitialValue(
+			SelectedField->Number.Value / SelectedField->Additive);
 }
+
 
 void DisplayUpdate(uint32_t Value)
 {
-	double CalculatingValue = 0;
-
-	double OldValue = SelectedField->Number.Value;
-
-	SelectedField->Number.Value = Value * SelectedField->Additive;
-
-	CalculatingValue = CalculateValue(SelectedVariable);
-
-	if (CalculatingValue > SelectedVariable->MaxValue)
+	if (UI_DisplayUpdate(Value) == ValueOverflow)
 	{
-		SelectedField->Number.Value = OldValue;
-
 		IncrementalEncoder_SetInitialValue(
 				SelectedField->Number.Value / SelectedField->Additive);
-
-		CalculatingValue = CalculateValue(SelectedVariable);
 	}
-
-	SelectedVariable->Value = CalculatingValue;
-
-	HD44780_WriteNumber(SelectedField->X, SelectedField->Y,
-			&SelectedField->Number, SelectedField->Format);
-
-	HD44780_SetCursor(
-			SelectedField->X,
-			SelectedField->Y);
 
 	if (SelectedVariable == &Period)
 	{
@@ -313,58 +152,6 @@ void DisplayUpdate(uint32_t Value)
 	}
 }
 
-void InitMultiDigitNumber(struct MultiDigitNumber Value)
-{
-	uint8_t Position_X_Offset = 0;
-
-	double SplitDigits[Value.AmountOfDigits];
-
-	for (int i = 0; i < Value.AmountOfDigits; i++)
-	{
-		SplitDigits[i] = (int)(((int)Value.Value % (int)pow(10, (i + 1))) / pow(10, i));
-	}
-
-	for (int i = 0; i < Value.AmountOfDigits; i++)
-	{
-		*Value.AllFields[i] = (struct FieldValue)
-		{
-				.X = Value.X + Position_X_Offset + i,
-				.Y = Value.Y,
-
-				.Number =
-				{
-						.Value = SplitDigits[Value.AmountOfDigits - 1 - i],
-						.DisplayedValue = -1,
-						.DisplayedValueLength = 1
-				},
-
-				.MaxValue = 9,
-
-				.ValueMultiplier = 1,
-
-				.Additive = 1,
-
-				.Format = "%.0f"
-		};
-
-		HD44780_WriteNumber(
-				Value.AllFields[i]->X,
-				Value.AllFields[i]->Y,
-				&Value.AllFields[i]->Number,
-				Value.AllFields[i]->Format);
-
-		if ((i == 0 && Value.AmountOfDigits != 1) ||
-			(i == 3 && Value.AmountOfDigits != 4))
-		{
-			HD44780_WriteString(
-					Value.AllFields[i]->X + 1,
-					Value.AllFields[i]->Y,
-					".");
-
-			Position_X_Offset++;
-		}
-	}
-}
 /* USER CODE END 0 */
 
 /**
@@ -399,74 +186,54 @@ int main(void)
   MX_DAC_Init();
   /* USER CODE BEGIN 2 */
 
+  uint8_t ButtonPressed = 0;
+  uint8_t SelectedFieldNumber = FieldNumber;
+
+  /*********************************************/
+  //
+  //	Инициализация дисплея и UI
+  //
+  /*********************************************/
+
   // I2C Address: 0x3F or 0x27
   HD44780_Init_I2C(&hi2c1, 0x3F, TwoLines, Line);
 
+  UI_Init(Vref,
+		  HD44780_WriteString,
+		  HD44780_WriteNumber,
+		  HD44780_SetCursor);
+
+  /*********************************************/
+  //
+  //	Инициализация энкодера
+  //
+  /*********************************************/
+
+  CurrentChangeMode = Field;
+
   IncrementalEncoder_Init();
+  IncrementalEncoder_SetInitialValue(FieldNumber / 1);
 
-  /**********************************/
+  /*********************************************/
   //
-  // Period
+  //	Инициализация ЦАП
   //
-  /**********************************/
-
-  HD44780_WriteString(1, 1, "Period");
-
-  InitMultiDigitNumber(Period);
-
-  HD44780_WriteString(19, 1, "us");
-
-  /**********************************/
-  //
-  // DutyCycle
-  //
-  /**********************************/
-
-  HD44780_WriteString(1, 2, "DuCycl");
-
-  InitMultiDigitNumber(DutyCycle);
-
-  HD44780_WriteString(19, 2, "us");
-
-  /**********************************/
-  //
-  // Amplitude
-  //
-  /**********************************/
-
-  HD44780_WriteString(1, 3, "Amplitude");
-
-  InitMultiDigitNumber(Amplitude);
-
-  HD44780_WriteString(19, 3, "mV");
-
-  /**********************************/
-  //
-  // Other Settings
-  //
-  /**********************************/
-
-  SelectedField = AllFields[0];
-  IncrementalEncoder_SetInitialValue(SelectedField->Number.Value / SelectedField->Additive);
-
-  HD44780_SetCursor(
-		  SelectedField->X,
-		  SelectedField->Y);
+  /*********************************************/
 
   DAC_Code = DAC_GetCodeFrom_Volt(Amplitude.Value / 1000);
   HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
 
+  /*********************************************/
+  //
+  //	Инициализация генератора импульсов
+  //
+  /*********************************************/
+
   PulseControl_Init(Period_Start_Handler, DutyCycle_End_Handler);
 
   PulseControl_Generation_Start(
-		  (uint32_t)(Period.Value),
+		  (uint32_t)Period.Value,
 		  (uint32_t)DutyCycle.Value);
-
-  double qw = FieldCounter;
-
-  IncrementalEncoder_SetInitialValue(
-  						FieldCounter / 1);
-
 
   /* USER CODE END 2 */
 
@@ -493,10 +260,8 @@ int main(void)
 		  {
 			  CurrentChangeMode = Field;
 
-				IncrementalEncoder_SetInitialValue(
-						FieldCounter / 1);
+			  IncrementalEncoder_SetInitialValue(FieldNumber);
 		  }
-
 	  }
 
 	  else if (ButtonPressed != 0)
@@ -504,40 +269,59 @@ int main(void)
 		  ButtonPressed = 0;
 	  }
 
+	  // Изменение поля
 
 	  if (CurrentChangeMode == Field)
 	  {
-		  qw = IncrementalEncoder_GetValue(
-				  (NumberOfFields + 1) / 1) * 1;
+		  SelectedFieldNumber = IncrementalEncoder_GetValue(
+				  UI_NumberOfFields + 1);
 
-		  if (qw == 0)
+		  if (SelectedFieldNumber == 0)
 		  {
-			  qw = 1;
-			  IncrementalEncoder_SetInitialValue(1);
+			  SelectedFieldNumber = 1;
+			  IncrementalEncoder_SetInitialValue(SelectedFieldNumber);
 		  }
 
-		  if (qw != FieldCounter)
+		  if (SelectedFieldNumber != FieldNumber)
 		  {
-			  FieldCounter = qw;
+			  if (SelectedFieldNumber > UI_NumberOfFields)
+			  {
+				  SelectedFieldNumber = 1;
+			  }
 
-				if (FieldCounter > NumberOfFields)
-				{
-					FieldCounter = 1;
-					qw = 1;
-				}
+			  FieldNumber = SelectedFieldNumber;
 
-
-				HD44780_SetCursor(
-							AllFields[FieldCounter - 1]->X,
-							AllFields[FieldCounter - 1]->Y);
+			  HD44780_SetCursor(
+					  UI_GetField(FieldNumber)->X,
+					  UI_GetField(FieldNumber)->Y);
 		  }
 	  }
 
+	  // Изменение значения выбранного поля
+
 	  else
 	  {
+		  CachedValue = SelectedVariable->Value;
+		  CachedFieldValue = SelectedField->Number.Value;
+
 		  IncrementalEncoder_GetValue_FromCallback(DisplayUpdate,
 				  ((SelectedField->MaxValue + SelectedField->Additive) /
 				  SelectedField->Additive));
+
+		  if (SelectedVariable == &Period ||
+			  SelectedVariable == &DutyCycle)
+		  {
+			  if (Period.Value < DutyCycle.Value)
+			  {
+				  SelectedVariable->Value = CachedValue;
+				  SelectedField->Number.Value = CachedFieldValue;
+
+				  DisplayUpdate((uint32_t)SelectedField->Number.Value);
+
+				  IncrementalEncoder_SetInitialValue(
+						  SelectedField->Number.Value / SelectedField->Additive);
+			  }
+		  }
 	  }
 
 	  HAL_Delay(100);
